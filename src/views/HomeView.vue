@@ -1,18 +1,47 @@
-<template>
-  <div class="home">
-    <img alt="Vue logo" src="../assets/logo.png">
-    <HelloWorld msg="Welcome to Your Vue.js App"/>
-  </div>
-</template>
+<script setup>
+import { onMounted, onUnmounted, ref } from "vue";
+import { useSanityStore } from "@/store/storeIndex";
+import PostCard from "@/components/PostCard.vue";
+import client from "../../client";
 
-<script>
-// @ is an alias to /src
-import HelloWorld from '@/components/HelloWorld.vue'
+const store = useSanityStore();
+const subscription = ref(null);
 
-export default {
-  name: 'HomeView',
-  components: {
-    HelloWorld
-  }
-}
+const posts = store.posts;
+
+onMounted(() => {
+  // store.fetchPost()
+  const query = '*[_type == "post"]';
+  store.fetchPosts();
+
+  subscription.value = client.listen(query).subscribe((update) => {
+    switch (update.transition) {
+      case "update":
+        console.log("post updated", update);
+        break;
+      case "appear":
+        console.log("Post appeared", update);
+        break;
+      case "disappear":
+        console.log("Post disappeared", update);
+        break;
+    }
+  });
+});
+
+onUnmounted(() => {
+  subscription.value.unsubscribe();
+});
 </script>
+
+<template>
+  <main class="home-page">
+    <section class="container mx-auto p-4">
+      <h1 class="text-2xl mb-8">Latest Posts</h1>
+
+      <div class="grid gap-4">
+        <PostCard v-for="(post, i) in posts" :key="i" :post="post" />
+      </div>
+    </section>
+  </main>
+</template>
