@@ -6,7 +6,7 @@ import client from "../../client";
 
 const store = useSanityStore();
 const subscription = ref(null);
-
+let toPost = null;
 const posts = store.posts;
 
 onMounted(() => {
@@ -14,17 +14,54 @@ onMounted(() => {
   const query = '*[_type == "post"]';
   store.fetchPosts();
 
-  subscription.value = client.listen(query).subscribe((update) => {
-    switch (update.transition) {
-      case "update":
-        console.log("post updated", update);
-        break;
-      case "appear":
-        console.log("Post appeared", update);
-        break;
-      case "disappear":
-        console.log("Post disappeared", update);
-        break;
+  subscription.value = client.listen(query).subscribe(async (update) => {
+    // switch (update.transition) {
+    //   case "update":
+    //     console.log("post updated", update);
+    //     client.getDocument(update.result.author._ref).then((author) => {
+    //       let post = null;
+
+    //       if (update.result.author._ref) {
+    //         post = {
+    //           ...update.result,
+    //           author,
+    //         };
+    //       }
+
+    //       return store.updatePost(post);
+    //     });
+    //     // await client.getDocument(update.result.author._ref).then((author) => {
+    //     //   // const post = {
+    //     //   //   ...update.result,
+    //     //   //   author,
+    //     //   // };
+    //     //   store.updatePost({
+    //     //     ...update.result,
+    //     //     author,
+    //     //   });
+    //     //   console.log("author", author);
+    //     // });
+    //     break;
+    //   case "appear":
+    //     console.log("Post appeared", update);
+    //     break;
+    //   case "disappear":
+    //     console.log("Post disappeared", update);
+    //     break;
+    // }
+    if (update.transition === "update") {
+      try {
+        const author = await client.getDocument(update.result.author._ref);
+        toPost = {
+          ...update.result,
+          author,
+        };
+        // store.updatePost(toPost);
+        store.replacePost(toPost);
+        console.log("post updated", toPost);
+      } catch (error) {
+        console.log("error posting update", error);
+      }
     }
   });
 });
